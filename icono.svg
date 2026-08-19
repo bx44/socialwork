@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Or Barak · Educativo">
+  <rect width="512" height="512" rx="112" fill="#141B34"/>
+
+  <!-- Escudo -->
+  <path d="M256 74 L398 122 V264 C398 344 336 402 256 438 C176 402 114 344 114 264 V122 Z"
+        fill="none" stroke="#E0AE3C" stroke-width="10"/>
+  <path d="M256 98 L376 138 V264 C376 331 326 381 256 414 C186 381 136 331 136 264 V138 Z"
+        fill="none" stroke="#E0AE3C" stroke-width="3.5" opacity="0.5"/>
+
+  <!-- Barak: el relámpago -->
+  <path d="M292 128 L192 258 H246 L222 330 L322 208 H262 Z" fill="#E0AE3C"/>
+
+  <!-- Las cuatro dimensiones del acompañamiento educativo -->
+  <g>
+    <rect x="173" y="352" width="34" height="34" rx="8" fill="#FFFFFF"/>
+    <rect x="217" y="352" width="34" height="34" rx="8" fill="#FFFFFF" opacity="0.7"/>
+    <rect x="261" y="352" width="34" height="34" rx="8" fill="#FFFFFF" opacity="0.7"/>
+    <rect x="305" y="352" width="34" height="34" rx="8" fill="#E0AE3C"/>
+  </g>
+</svg>
