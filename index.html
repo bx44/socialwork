@@ -153,7 +153,7 @@ input.c:focus,select.c:focus,textarea.c:focus{outline:0;border-color:var(--noche
 /* ============================================================
    CONFIGURACIÓN — pega aquí la URL /exec de tu Apps Script
    ============================================================ */
-const API = "https://script.google.com/macros/s/AKfycbwgi4oGGZgHRhZ1F4wmKa_JRZODyAdJKgmiRh9IhoYIPW7aVeWO0YGPuYBPLwhGKb8RNA/exec";
+const API = "PEGA_AQUI_LA_URL_DE_TU_APPS_SCRIPT";
 
 /* ------------------------------------------------------------ */
 let PIN = null, D = null, vista = "lista", casoId = null, tab = "pendientes";
@@ -353,12 +353,13 @@ function pinta() {
       <div class="marca">Or Barak</div>
       <div class="sub">Trabajo social</div>
       <div class="quien">${esc(D.miembro.nombre)} · ${esc(D.miembro.rol)}</div>
-      ${vista === "instrumento" ? "" : `<div class="nav-sec">
-        <button data-sec="casos" aria-current="${seccion==='casos'}">Casos</button>
-        <button data-sec="diagnosticos" aria-current="${seccion==='diagnosticos'}">Diagnósticos</button>
+      ${vista === "instrumento" || esDocente() ? "" : `<div class="nav-sec">
+        ${pestanas().map(([k, n]) => `<button data-sec="${k}" aria-current="${seccion===k}">${n}</button>`).join("")}
       </div>`}
     </header>`;
-  const cuerpo = vista === "instrumento" ? vistaInstrumento()
+  const cuerpo = esDocente() ? vistaDocente()
+    : vista === "instrumento" ? vistaInstrumento()
+    : seccion === "reportes" ? vistaBandeja()
     : seccion === "diagnosticos" ? vistaDiagnosticos()
     : vista === "caso" ? vistaCaso() : vistaLista();
   app().innerHTML = cabeza + cuerpo;
@@ -631,6 +632,8 @@ function conecta() {
       if (confirm("¿Marcar el caso como atendido?")) return accion({ accion:"estado", id: casoId, estado:"atendida" }, cerrarCaso);
       return;
     }
+    const nrep = t.closest("[data-nuevo-reporte]");        if (nrep) return hojaReporte();
+    const rep2 = t.closest("[data-rep]");                  if (rep2) return hojaResponder(rep2.dataset.rep);
     const abrir = t.closest("[data-abrir]");              if (abrir) {
       if (abrir.dataset.abrir === "nuevo") return hojaNuevo();
       if (abrir.dataset.abrir === "intervencion") return hojaIntervencion();
@@ -943,6 +946,202 @@ function hojaAlarma() {
         area: document.getElementById("area").value, urgencia: "alta",
         motivo: mot, esperado: "Aviso inmediato a Dirección Educativa y canalización externa.",
         reservada: true }, ev.target);
+    };
+  });
+}
+
+/* ============================================================
+   Reportes — lo que mandan los maestros
+   ============================================================ */
+
+const esDocente = () => D && D.modo === "docente";
+const esDireccion = () => D && D.modo === "direccion";
+
+function pestanas() {
+  const nuevos = (D.reportes || []).filter(r => r.estado === "nuevo").length;
+  const base = [["casos", "Casos"], ["diagnosticos", "Diagnósticos"]];
+  if (esDireccion()) base.push(["reportes", "Reportes" + (nuevos ? " " + nuevos : "")]);
+  return base;
+}
+
+const EST_REP = {
+  "nuevo":       { txt: "Sin leer",    cls: "amb" },
+  "en revisión": { txt: "En revisión", cls: "azu" },
+  "atendido":    { txt: "Atendido",    cls: "ver" }
+};
+
+function tarjetaReporte(r, conAutor) {
+  const e = EST_REP[r.estado] || EST_REP.nuevo;
+  const quien = r.ambito === "alumno" && r.alumnoId ? alumno(r.alumnoId)
+    : r.ambito === "grupo" ? "Grupo" : r.ambito === "institucional" ? "Institucional" : "Personal";
+  return `<button class="caso ${r.urgencia === "alta" && r.estado !== "atendido" ? "urgente" : ""}"
+      ${conAutor ? `data-rep="${r.id}"` : ""}>
+    <div class="nombre">${esc(r.asunto || r.tipo || "Reporte")}</div>
+    <div class="meta">${esc(quien)} · ${esc(r.tipo)} · ${fmt(r.fecha)}${
+      conAutor ? " · " + esc(persona(r.autorId)) : ""}</div>
+    <div class="motivo">${esc(r.descripcion)}</div>
+    <div class="tags">
+      <span class="chip ${e.cls}">${e.txt}</span>
+      ${r.urgencia === "alta" && r.estado !== "atendido" ? `<span class="chip roj">Urgente</span>` : ""}
+      ${r.canalizacionId ? `<span class="chip azu">Canalizado</span>` : ""}
+    </div>
+    ${r.respuesta ? `<div style="margin-top:10px;background:#f7f9fc;border-radius:9px;padding:10px">
+      <div class="eti">Respuesta de la dirección</div>
+      <div style="font-size:14px;margin-top:4px">${esc(r.respuesta)}</div></div>` : ""}
+  </button>`;
+}
+
+/* ---------------- vista del maestro ---------------- */
+function vistaDocente() {
+  const mios = [...(D.reportes || [])].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+  const sinLeer = mios.filter(r => r.estado === "nuevo").length;
+  return `<main>
+    <div class="tarjeta" style="margin-bottom:14px">
+      <div class="eti">Para qué es esto</div>
+      <p style="margin:8px 0 0;font-size:15px">Si viste algo de un alumno, del grupo o de la escuela que la
+      dirección debería saber, mándalo aquí. No tiene que ser un problema grave: lo que notaste hoy y se te
+      va a olvidar mañana es justo lo que sirve.</p>
+    </div>
+    <button class="b ambar" style="margin-bottom:16px" data-nuevo-reporte="1">Reportar algo</button>
+    <div class="eti" style="margin-bottom:8px">Lo que has mandado${
+      mios.length ? ` · ${mios.length}` : ""}${sinLeer ? ` · ${sinLeer} sin leer` : ""}</div>
+    ${mios.length ? mios.map(r => tarjetaReporte(r, false)).join("")
+      : `<div class="vacio">Todavía no has mandado ningún reporte.</div>`}
+  </main>`;
+}
+
+/* ---------------- bandeja de la dirección ---------------- */
+function vistaBandeja() {
+  const todos = [...(D.reportes || [])].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+  const lista = tab === "cerrados" ? todos.filter(r => r.estado === "atendido")
+    : tab === "urgentes" ? todos.filter(r => r.urgencia === "alta" && r.estado !== "atendido")
+    : todos.filter(r => r.estado !== "atendido");
+  const nuevos = todos.filter(r => r.estado === "nuevo").length;
+  const viejos = todos.filter(r => r.estado === "nuevo" && dias(r.fecha) > 3).length;
+
+  const orden = [...lista].sort((a, b) => {
+    if (a.urgencia !== b.urgencia) return a.urgencia === "alta" ? -1 : 1;
+    return String(a.fecha).localeCompare(String(b.fecha));
+  });
+
+  return `<main>
+    ${viejos ? `<div class="aviso">${viejos} reporte${viejos > 1 ? "s llevan" : " lleva"} más de 3 días
+      sin leer. Un maestro que no ve respuesta deja de reportar.</div>` : ""}
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="pendientes" aria-selected="${tab==='pendientes'}">Pendientes ${
+        todos.filter(r => r.estado !== "atendido").length}</button>
+      <button role="tab" data-tab="urgentes" aria-selected="${tab==='urgentes'}">Urgentes</button>
+      <button role="tab" data-tab="cerrados" aria-selected="${tab==='cerrados'}">Atendidos</button>
+    </div>
+    ${nuevos && tab === "pendientes" ? `<div class="eti" style="margin-bottom:8px">${nuevos} sin leer</div>` : ""}
+    ${orden.length ? orden.map(r => tarjetaReporte(r, true)).join("")
+      : `<div class="vacio">No hay reportes en esta lista.</div>`}
+  </main>`;
+}
+
+/* ---------------- crear reporte ---------------- */
+function hojaReporte(est) {
+  const e = est || { ambito: "alumno", tipo: "", urgencia: "normal", alumnoId: "" };
+  const tipos = (D.tipos && D.tipos[e.ambito]) || [];
+  abreHoja(`
+    <h2>Reportar algo</h2>
+    <div class="desc">Lo lee la Dirección Educativa. Escribe lo que viste, no la conclusión.</div>
+    <div class="eti" style="margin-bottom:6px">¿De qué se trata?</div>
+    <div class="opciones" id="ambitos">
+      ${[["alumno","Un alumno"],["grupo","El grupo"],["institucional","La escuela"],["personal","Necesito apoyo"]]
+        .map(([k, n]) => `<button data-amb="${k}" aria-pressed="${e.ambito===k}">${n}</button>`).join("")}
+    </div>
+    ${e.ambito === "alumno" ? `<label class="campo"><span>Alumno</span>
+      <select class="c" id="al"><option value="">Selecciona</option>
+        ${D.alumnos.map(a => `<option value="${a.id}" ${a.id===e.alumnoId?"selected":""}>${esc(a.nombre)}</option>`).join("")}
+      </select></label>` : ""}
+    <label class="campo"><span>Tipo</span>
+      <select class="c" id="tipo">${tipos.map(t => `<option ${t===e.tipo?"selected":""}>${esc(t)}</option>`).join("")}</select></label>
+    <div class="eti" style="margin-bottom:6px">Urgencia</div>
+    <div class="seg" id="seg">
+      <button data-u="normal" aria-pressed="${e.urgencia==='normal'}">Normal</button>
+      <button data-u="alta" aria-pressed="${e.urgencia==='alta'}">Urgente</button>
+    </div>
+    <label class="campo"><span>En una línea</span>
+      <input class="c" id="asunto" value="${esc(e.asunto || "")}" placeholder="Lleva tres días sin entrar a clase"></label>
+    <label class="campo"><span>Qué pasó</span>
+      <textarea class="c" id="desc" placeholder="Cuándo, qué viste, quién estaba.">${esc(e.descripcion || "")}</textarea></label>
+    <div class="fila-botones">
+      <button class="b claro" data-cerrar="1">Cancelar</button>
+      <button class="b primario" id="guardar">Enviar</button>
+    </div>`, () => {
+    const leer = () => ({
+      ambito: e.ambito,
+      urgencia: e.urgencia,
+      alumnoId: document.getElementById("al") ? document.getElementById("al").value : "",
+      tipo: document.getElementById("tipo").value,
+      asunto: document.getElementById("asunto").value,
+      descripcion: document.getElementById("desc").value
+    });
+    document.getElementById("ambitos").onclick = (ev) => {
+      const b = ev.target.closest("button[data-amb]"); if (!b) return;
+      hojaReporte({ ...leer(), ambito: b.dataset.amb, tipo: "" });
+    };
+    document.getElementById("seg").onclick = (ev) => {
+      const b = ev.target.closest("button[data-u]"); if (!b) return;
+      e.urgencia = b.dataset.u;
+      [...document.querySelectorAll("#seg button")].forEach(x => x.setAttribute("aria-pressed", x === b));
+    };
+    document.getElementById("guardar").onclick = (ev) => {
+      const d = leer();
+      if (!d.descripcion.trim()) return alert("Escribe qué pasó.");
+      if (d.ambito === "alumno" && !d.alumnoId) return alert("Falta decir de qué alumno.");
+      accion({ accion: "reporte", ...d }, ev.target);
+    };
+  });
+}
+
+/* ---------------- responder reporte ---------------- */
+function hojaResponder(id) {
+  const r = (D.reportes || []).find(x => x.id === id);
+  if (!r) return;
+  let estado = r.estado === "nuevo" ? "en revisión" : r.estado;
+  const ts = (D.equipo || []).find(m => /trabajador\s*social/i.test(m.rol || ""));
+  abreHoja(`
+    <h2>${esc(r.asunto || r.tipo)}</h2>
+    <div class="desc">${esc(persona(r.autorId))} · ${fmt(r.fecha)}${
+      r.ambito === "alumno" && r.alumnoId ? " · " + esc(alumno(r.alumnoId)) : ""}</div>
+    <div class="guia"><div class="eti">Lo que reportó</div>
+      <p style="margin:8px 0 0;font-size:15px">${esc(r.descripcion)}</p></div>
+    <label class="campo"><span>Tu respuesta al maestro</span>
+      <textarea class="c" id="resp" placeholder="Qué se va a hacer, o qué ya se hizo.">${esc(r.respuesta || "")}</textarea></label>
+    <div class="eti" style="margin-bottom:6px">Estado</div>
+    <div class="seg" id="seg">
+      <button data-e="en revisión" aria-pressed="${estado==='en revisión'}">En revisión</button>
+      <button data-e="atendido" aria-pressed="${estado==='atendido'}">Atendido</button>
+    </div>
+    <div class="fila-botones" style="margin-bottom:8px">
+      <button class="b claro" data-cerrar="1">Cancelar</button>
+      <button class="b primario" id="guardar">Guardar</button>
+    </div>
+    ${r.ambito === "alumno" && r.alumnoId && !r.canalizacionId
+      ? `<button class="b ambar" id="canalizar">Canalizar a trabajo social</button>` : ""}
+    ${r.canalizacionId ? `<div class="aviso" style="background:var(--azul-suave);border-color:#c6dcec;color:var(--azul)">
+      Este reporte ya se convirtió en un caso de trabajo social.</div>` : ""}`, () => {
+    document.getElementById("seg").onclick = (ev) => {
+      const b = ev.target.closest("button[data-e]"); if (!b) return;
+      estado = b.dataset.e;
+      [...document.querySelectorAll("#seg button")].forEach(x => x.setAttribute("aria-pressed", x === b));
+    };
+    document.getElementById("guardar").onclick = (ev) => accion({
+      accion: "responderReporte", id: r.id, estado,
+      respuesta: document.getElementById("resp").value
+    }, ev.target);
+    const bc = document.getElementById("canalizar");
+    if (bc) bc.onclick = (ev) => {
+      if (!confirm("¿Abrir un caso de trabajo social con este reporte?")) return;
+      accion({
+        accion: "reporteACanalizacion", id: r.id, alumnoId: r.alumnoId,
+        paraId: ts ? ts.id : "", area: (D.areas || [])[0], urgencia: r.urgencia,
+        motivo: (r.asunto ? r.asunto + ". " : "") + r.descripcion,
+        esperado: "Valoración inicial y contacto con la familia.",
+        respuesta: document.getElementById("resp").value || "Se canalizó a trabajo social."
+      }, ev.target);
     };
   });
 }
