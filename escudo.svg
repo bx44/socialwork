@@ -1,6 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" width="512" height="512">
-<rect width="512" height="512" fill="#29235C"></rect>
-<svg x="124.9438202247191" y="52" width="262.1123595505618" height="288" viewBox="175 490 405 445" overflow="hidden"><defs id="defs13">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 466 512" width="466" height="512"><svg x="0" y="0" width="466" height="512" viewBox="175 490 405 445" overflow="hidden"><defs id="defs13">
     <linearGradient id="linearGradient7926">
       <stop style="stop-color:#131530;stop-opacity:1;" offset="0" id="stop7924"></stop>
       <stop style="stop-color:#25295e;stop-opacity:1;" offset="1" id="stop7922"></stop>
@@ -423,6 +421,4 @@
         </g>
       </g>
     </g>
-  </g></svg>
-<rect x="0" y="400" width="512" height="112" fill="#C99B52"></rect>
-</svg>
+  </g></svg></svg>

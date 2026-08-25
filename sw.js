@@ -2,8 +2,8 @@
    Sirve para que la app se pueda instalar y para que abra aunque la señal esté mala.
    No guarda en caché nada del Apps Script: los datos siempre se piden a la red. */
 
-const CACHE = "orbarak-educativo-v2";
-const BASE = ["./", "./index.html", "./icono.svg", "./icono-192.png", "./manifest.json"];
+const CACHE = "orbarak-educativo-v3";
+const BASE = ["./", "./index.html", "./icono.svg", "./escudo.svg", "./icono-192.png", "./manifest.json"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASE)).then(() => self.skipWaiting()));
